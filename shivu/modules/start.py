@@ -37,7 +37,7 @@ async def start(update: Update, context: CallbackContext) -> None:
 
 
 
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━⧫   
+    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━⧫   
       ✾ Wᴇʟᴄᴏᴍɪɴɢ ʏᴏᴜ ᴛᴏ ᴛʜᴇ 🍃,ᴡᴀɪғᴜ ᴄʜᴀD ʙᴏᴛ🫧 
     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━⧫
     ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━⧫
@@ -49,9 +49,9 @@ async def start(update: Update, context: CallbackContext) -> None:
       Tᴀᴘ ᴏɴ "Hᴇʟᴘ" ғᴏʀ ᴍᴏʀᴇ ᴄᴏᴍᴍᴀɴᴅs.***"""
 
         keyboard = [
-            [InlineKeyboardButton("✤ ᴀᴅᴅ ᴍᴇ ✤", url=f'http://t.me/{BOT_USERNAME}?startgroup=new')],
-            [InlineKeyboardButton("☊ 𝗌ᴜᴘᴘᴏʀᴛ ☊", url=f'https://t.me/{SUPPORT_CHAT}'),
-            InlineKeyboardButton("✠ ᴜᴘᴅᴀᴛᴇ𝗌 ✠", url=f'https://t.me/{UPDATE_CHAT}')],
+            [InlineKeyboardButton("✤ ᴀᴅᴅ ᴍᴇ ✤", url=f'http://t.me/Waifu_ChanBbot?startgroup=new')],
+            [InlineKeyboardButton("☊ 𝗌ᴜᴘᴘᴏʀᴛ ☊", url=f'https://t.me/+ZTeO__YsQoIwNTVl'),
+            InlineKeyboardButton("✠ ᴜᴘᴅᴀᴛᴇ𝗌 ✠", url=f'https://t.me/Anime_P_F_P')],
             [InlineKeyboardButton("✇ ʜᴇʟᴘ ✇", callback_data='help')],[InlineKeyboardButton("≎ ᴄʀᴇᴅɪᴛ ≎", url=f'https://t.me/{UPDATE_CHAT}')],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -113,9 +113,9 @@ async def button(update: Update, context: CallbackContext) -> None:
 ◈ ━━━━━━━━ ● ━━━━━━━━ ◈***"""
 
         keyboard = [
-           [InlineKeyboardButton("✤ ᴀᴅᴅ ᴍᴇ ✤", url=f'http://t.me/{BOT_USERNAME}?startgroup=new')],
-            [InlineKeyboardButton("☊ 𝗌ᴜᴘᴘᴏʀᴛ ☊", url=f'https://t.me/{SUPPORT_CHAT}'),
-            InlineKeyboardButton("✠ ᴜᴘᴅᴀᴛᴇ𝗌 ✠", url=f'https://t.me/{UPDATE_CHAT}')],
+           [InlineKeyboardButton("✤ ᴀᴅᴅ ᴍᴇ ✤", url=f'http://t.me/Waifu_ChanBbot?startgroup=new')],
+            [InlineKeyboardButton("☊ 𝗌ᴜᴘᴘᴏʀᴛ ☊", url=f'https://t.me/+ZTeO__YsQoIwNTVl'),
+            InlineKeyboardButton("✠ ᴜᴘᴅᴀᴛᴇ𝗌 ✠", url=f'https://t.me/Anime_P_F_P')],
             [InlineKeyboardButton("✇ ʜᴇʟᴘ ✇", callback_data='help')],[InlineKeyboardButton("≎ ᴄʀᴇᴅɪᴛ ≎", url=f'https://t.me/{UPDATE_CHAT}')],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
