@@ -1,24 +1,19 @@
-class Config(object):
+lass Config(object):
     LOGGER = True
-
-    # Get this value from my.telegram.org/apps
     OWNER_ID = "6675050163"
-    sudo_users = "6675050163", "6087651372","7640076990","1420481421","6645960688"
-    GROUP_ID = -1002499806698
-    TOKEN = "8175826981:AAGrz7p7NiE6t1vDIKDBTdbhHrcjB7MGDAo"
-    mongo_url = "mongodb+srv://naruto:hinatababy@cluster0.rqyiyzx.mongodb.net/"
-    PHOTO_URL = ["https://graph.org/file/09e83a1d89aceabd480c5-2afc46a31083fe23f2.jpg", "https://graph.org/file/0aa659508c1add9ae4c86-2b335aa5262b7b64d2.jpg"]
-    SUPPORT_CHAT = "Anime_Circle_Club"
-    UPDATE_CHAT = "Waifu_Chan_Bot_updates"
-    BOT_USERNAME = "@@Waifuwaiudnsj_Bot"
+    sudo_users = ["8043832960","7885908019", "7756901810"]
+    GROUP_ID = -100237291402
+    TOKEN = "7689391231:AAEHXLz_uEv4Kpd-pZHQqVjkPujA7-ObJZw"
+    mongo_url = "mongodb+srv://Hinatalover7:HSCREW7@hinatalover7.rql67.mongodb.net/?retryWrites=true&w=majority&appName=Hinatalover7"  # [>
+    PHOTO_URL = ["http://postimg.cc/cv6G20zT"]
+    SUPPORT_CHAT = "https://t.me/Anime_Circle_Club"
+    UPDATE_CHAT = "https://t.me/Waifu_Chan_Bot_updates"
+    BOT_USERNAME = "@Waifu_ChanBbot"
     CHARA_CHANNEL_ID = "-1002640379822"
-    api_id = 28480539
-    api_hash = "6320d9f1bc1f0b72ad66ebdb9d6bfc2c"
-
+    api_id = 20952516
+    api_hash = "4b7997216605cd4dd9cb2ee513838955"
+class Production(Config):  # ✅  Config se inherit ho raha hai
+    LOGGER = True
+class Development(Config):  # ✅  Config se inherit ho raha hai
+    LOGGER = True
     
-class Production(Config):
-    LOGGER = True
-
-
-class Development(Config):
-    LOGGER = True
