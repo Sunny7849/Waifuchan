@@ -39,6 +39,7 @@ use Rarity Number accordingly rarity Map
 | 2 | 🟣 Rare     |
 | 3 | 🟡 Legendary|
 | 4 | 🟢 Medium   |
+| 5 | 🔮 ULTRA    |
 
 
 ## USER COMMANDS
