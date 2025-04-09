@@ -26,18 +26,19 @@ def show_gif():
     img_label.config(image=gif_image)
     img_label.image = gif_image
 
-# Create Tkinter Window
-root = tk.Tk()
-root.title("Random Kiss GIF")
-root.geometry("400x400")
+# Only run if GUI is supported
+if __name__ == "__main__":
+    try:
+        root = tk.Tk()
+        root.title("Random Kiss GIF")
+        root.geometry("400x400")
 
-# Button to load GIF
-button = tk.Button(root, text="Kiss GIF Dekho", command=show_gif)
-button.pack(pady=20)
+        button = tk.Button(root, text="Kiss GIF Dekho", command=show_gif)
+        button.pack(pady=20)
 
-# Label to show GIF
-img_label = tk.Label(root)
-img_label.pack()
+        img_label = tk.Label(root)
+        img_label.pack()
 
-# Run Tkinter loop
-root.mainloop()
+        root.mainloop()
+    except tk.TclError:
+        print("GUI environment nahi mila. Tkinter window skip ki gayi.")
