@@ -11,6 +11,7 @@ from telegram.ext import CommandHandler, CallbackContext, MessageHandler, filter
 from shivu import collection, top_global_groups_collection, group_user_totals_collection, user_collection, user_totals_collection, shivuu
 from shivu import application, LOGGER
 from shivu.modules import ALL_MODULES
+
 locks = {}
 message_counts = {}
 sent_characters = {}
@@ -18,12 +19,19 @@ last_characters = {}
 first_correct_guesses = {}
 last_user = {}
 warned_users = {}
+
 # Auto-load other modules
 for module_name in ALL_MODULES:
     importlib.import_module("shivu.modules." + module_name)
+
 def escape_markdown(text):
     escape_chars = r'\*_`\\~>#+-=|{}.!'
     return re.sub(r'([%s])' % re.escape(escape_chars), r'\\\1', text)
+
+# /start command
+async def start(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text("Bot is running! Use /upload, /guess, or talk in group to start.")
+
 # Message count logic to trigger spawns
 async def message_counter(update: Update, context: CallbackContext) -> None:
     chat_id = str(update.effective_chat.id)
@@ -48,6 +56,7 @@ async def message_counter(update: Update, context: CallbackContext) -> None:
         if message_counts[chat_id] % message_frequency == 0:
             await send_image(update, context)
             message_counts[chat_id] = 0
+
 # Send new character image
 async def send_image(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
@@ -66,6 +75,7 @@ async def send_image(update: Update, context: CallbackContext) -> None:
         caption=f"A New {character['rarity']} Character Appeared...\n/guess Character Name and add in Your Harem",
         parse_mode='Markdown'
     )
+
 # Guess logic
 async def guess(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
@@ -111,6 +121,7 @@ async def guess(update: Update, context: CallbackContext) -> None:
         )
     else:
         await update.message.reply_text("Incorrect guess. Try again!")
+
 # Upload command
 async def upload(update: Update, context: CallbackContext) -> None:
     if not context.args or len(context.args) < 3:
@@ -141,6 +152,7 @@ async def upload(update: Update, context: CallbackContext) -> None:
     }
     await collection.insert_one(character_data)
     await update.message.reply_text(f"Character `{name}` from `{anime}` added successfully!", parse_mode='Markdown')
+
 # Set favorite character
 async def fav(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
@@ -154,12 +166,15 @@ async def fav(update: Update, context: CallbackContext) -> None:
         return
     await user_collection.update_one({'id': user_id}, {'$set': {'favorites': [character_id]}})
     await update.message.reply_text("Character has been added to your favorites.")
+
 def main() -> None:
+    application.add_handler(CommandHandler("start", start, block=False))  # Added start handler
     application.add_handler(CommandHandler("guess", guess, block=False))
     application.add_handler(CommandHandler("fav", fav, block=False))
     application.add_handler(CommandHandler("upload", upload, block=False))
     application.add_handler(MessageHandler(filters.ALL, message_counter, block=False))
     application.run_polling(drop_pending_updates=True)
+
 if __name__ == "__main__":
     shivuu.start()
     LOGGER.info("Bot started")
