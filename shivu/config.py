@@ -1,4 +1,4 @@
-lass Config(object):
+class Config(object):
     LOGGER = True
     OWNER_ID = "8156600797"
     sudo_users = ["8156600797","7640076990", "7756901810"]
