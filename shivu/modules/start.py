@@ -8,7 +8,6 @@ from telegram.ext import CallbackContext, CommandHandler
 from shivu import application, SUPPORT_CHAT, UPDATE_CHAT, BOT_USERNAME, db, GROUP_ID
 from shivu import pm_users as collection 
 
-# Alag lists for gifs
 PHOTO_URL_PM = [
     "https://media0.giphy.com/media/BfevCgt1YxDTW/giphy.gif",
     "https://media4.giphy.com/media/6sv3Z8wXzyEzC/giphy.gif",
@@ -42,18 +41,18 @@ async def start(update: Update, context: CallbackContext) -> None:
         if user_data['first_name'] != first_name or user_data['username'] != username:
             await collection.update_one({"_id": user_id}, {"$set": {"first_name": first_name, "username": username}})
 
-    # Summoning animation lines
+    # Animated summoning sequence
     loading_lines = [
         "⏳ Initializing summoning core...",
         "⚡ Channeling chakra streams...",
         "🔍 Searching anime multiverse...",
         "🌀 Binding character essence...",
-        "✨ Summoning Jutsu Activated! ✨"
+        "🔮 Summoning Jutsu activated 🎐"
     ]
-
-    for line in loading_lines:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=line)
+    sent = await context.bot.send_message(chat_id=update.effective_chat.id, text=loading_lines[0])
+    for line in loading_lines[1:]:
         await asyncio.sleep(1.2)
+        await sent.edit_text(line)
 
     keyboard = [
         [InlineKeyboardButton("ADD ME", url=f'http://t.me/{BOT_USERNAME}?startgroup=new')],
