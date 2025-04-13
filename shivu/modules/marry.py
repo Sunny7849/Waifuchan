@@ -22,7 +22,12 @@ async def wmarry(update: Update, context: CallbackContext):
     user = update.effective_user
     if await waifu_coll.find_one({"char_id": char_id}):
         return await update.message.reply_text("This waifu is already married!")
-    await waifu_coll.insert_one({"char_id": char_id, "user_id": user.id, "username": user.first_name, "date": datetime.utcnow()})
+    await waifu_coll.insert_one({
+        "char_id": char_id,
+        "user_id": user.id,
+        "username": user.first_name,
+        "date": datetime.utcnow()
+    })
     await update.message.reply_text("You are now married to this waifu!")
 
 # /wcouples
@@ -64,24 +69,36 @@ async def marry(update: Update, context: CallbackContext):
         parse_mode='Markdown'
     )
 
-# Accept marry
+# Confirm Marry
 async def confirm_marry(update: Update, context: CallbackContext):
     query = update.callback_query
     from_id, to_id = map(int, query.data.split(":")[1:])
     key = frozenset([from_id, to_id])
     uid = query.from_user.id
+
     if uid not in key:
         return await query.answer("You're not part of this proposal!", show_alert=True)
+
     if key not in pending_marry:
-        return await query.edit_message_text("Request expired or invalid.")
+        return await query.answer("Request expired or invalid.", show_alert=True)
 
     pending_marry[key].add(uid)
+
     if len(pending_marry[key]) == 2:
-        await user_marry_coll.insert_one({"user1": from_id, "user2": to_id, "date": datetime.utcnow()})
+        await user_marry_coll.insert_one({
+            "user1": from_id,
+            "user2": to_id,
+            "date": datetime.utcnow()
+        })
         del pending_marry[key]
-        return await query.edit_message_text("💖 Marriage Confirmed! You both are now married!")
+        return await query.edit_message_text("🎉 Congratulations on the wedding! 💞")
     else:
-        return await query.edit_message_text("First person is ready. Waiting for the other...")
+        await query.edit_message_reply_markup(
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Will You Marry Me ❤️", callback_data=f"marry_confirm:{from_id}:{to_id}")]]
+            )
+        )
+        return await query.answer("You confirmed. Waiting for the other...", show_alert=False)
 
 # /married
 async def married(update: Update, context: CallbackContext):
@@ -106,20 +123,22 @@ async def divorce(update: Update, context: CallbackContext):
     keyboard = [[InlineKeyboardButton("Are You Sure 💔", callback_data=f"divorce_confirm:{match['user1']}:{match['user2']}")]]
     await update.message.reply_text("Divorce initiated. Waiting for both confirmations.", reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Accept divorce
+# Confirm Divorce
 async def confirm_divorce(update: Update, context: CallbackContext):
     query = update.callback_query
     user1, user2 = map(int, query.data.split(":")[1:])
     key = frozenset([user1, user2])
     uid = query.from_user.id
+
     if uid not in key:
         return await query.answer("You're not part of this divorce!", show_alert=True)
+
     if key not in pending_divorce:
-        return await query.edit_message_text("No active divorce found.")
+        return await query.answer("No active divorce request found.", show_alert=True)
 
     pending_divorce[key].add(uid)
+
     if len(pending_divorce[key]) == 2:
-        # Countdown effect
         msg = await query.edit_message_text("Both confirmed. Finalizing in 10...")
         for i in range(9, 0, -1):
             await asyncio.sleep(0.8)
@@ -129,7 +148,12 @@ async def confirm_divorce(update: Update, context: CallbackContext):
         del pending_divorce[key]
         await msg.edit_text("Now You Are UnMarried 🎐")
     else:
-        await query.edit_message_text("First person is ready. Waiting for the other...")
+        await query.edit_message_reply_markup(
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Are You Sure 💔", callback_data=f"divorce_confirm:{user1}:{user2}")]]
+            )
+        )
+        return await query.answer("You confirmed. Waiting for your partner...", show_alert=False)
 
 # Register handlers
 application.add_handler(CommandHandler("wmarry", wmarry))
