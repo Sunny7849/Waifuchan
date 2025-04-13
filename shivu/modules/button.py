@@ -1,72 +1,125 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHandler, CallbackContext
+from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, CallbackContext, filters
+from shivu import application
 
-# States
-ASK_CONTENT, ASK_BUTTON_TEXT, ASK_URL = range(3)
+user_data = {}
 
-# Temporary user data storage
-user_data_dict = {}
+# Start command
+async def start_button(update: Update, context: CallbackContext):
+    user_data[update.effective_user.id] = {"step": "content", "buttons": []}
+    await update.message.reply_text("Send the content (text/photo/video) to attach buttons.")
 
-def button_command(update: Update, context: CallbackContext):
-    update.message.reply_text("Send the content for add buttons (image/text/etc.)")
-    return ASK_CONTENT
+# Message flow
+async def button_flow(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        return
 
-def get_content(update: Update, context: CallbackContext):
-    user_id = update.message.from_user.id
-    user_data_dict[user_id] = {'content': update.message}
-    update.message.reply_text("Now send the button text.")
-    return ASK_BUTTON_TEXT
+    state = user_data[user_id]
 
-def get_button_text(update: Update, context: CallbackContext):
-    user_id = update.message.from_user.id
-    if user_id not in user_data_dict:
-        update.message.reply_text("Please start again with /button.")
-        return ConversationHandler.END
+    if state["step"] == "content":
+        state["content"] = update.message
+        state["step"] = "btn_text"
+        await update.message.reply_text("Send the button text.")
 
-    user_data_dict[user_id]['button_text'] = update.message.text
-    update.message.reply_text("Now send the sharing URL.")
-    return ASK_URL
+    elif state["step"] == "btn_text":
+        state["current_btn_text"] = update.message.text
+        state["step"] = "btn_url"
+        await update.message.reply_text("Now send the button URL.")
 
-def get_url(update: Update, context: CallbackContext):
-    user_id = update.message.from_user.id
-    if user_id not in user_data_dict:
-        update.message.reply_text("Please start again with /button.")
-        return ConversationHandler.END
+    elif state["step"] == "btn_url":
+        btn_text = state.pop("current_btn_text")
+        btn_url = update.message.text
+        state["buttons"].append(InlineKeyboardButton(btn_text, url=btn_url))
+        state["step"] = "add_more"
 
-    data = user_data_dict.pop(user_id)
-    url = update.message.text
-    button_text = data['button_text']
-    content_msg = data['content']
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("➕ Add More Buttons", callback_data="add_more")],
+            [InlineKeyboardButton("✏️ Edit Last Button", callback_data="edit_last")],
+            [InlineKeyboardButton("➖ Remove Last Button", callback_data="remove_last")],
+            [InlineKeyboardButton("✅ Done", callback_data="done_buttons")]
+        ])
+        await update.message.reply_text("Button added! What next?", reply_markup=keyboard)
 
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton(button_text, url=url)]])
+# Button callbacks
+async def button_callback(update: Update, context: CallbackContext):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
 
-    if content_msg.text:
-        content = content_msg.text
-        context.bot.send_message(chat_id=update.effective_chat.id, text=content, reply_markup=keyboard)
-    elif content_msg.photo:
-        photo_file_id = content_msg.photo[-1].file_id
-        caption = content_msg.caption if content_msg.caption else ""
-        context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_file_id, caption=caption, reply_markup=keyboard)
-    elif content_msg.video:
-        video_file_id = content_msg.video.file_id
-        caption = content_msg.caption if content_msg.caption else ""
-        context.bot.send_video(chat_id=update.effective_chat.id, video=video_file_id, caption=caption, reply_markup=keyboard)
-    else:
-        update.message.reply_text("Unsupported content. Please send text, image, or video.")
+    if user_id not in user_data:
+        return
 
-    return ConversationHandler.END
+    state = user_data[user_id]
 
-def cancel(update: Update, context: CallbackContext):
-    update.message.reply_text("Operation cancelled.")
-    return ConversationHandler.END
+    if query.data == "add_more":
+        state["step"] = "btn_text"
+        await query.message.reply_text("Send next button text.")
 
-# Add to your handler list
-button_conv_handler = ConversationHandler(
-    entry_points=[CommandHandler("button", button_command)],
-    states={
-        ASK_CONTENT: [MessageHandler(filters.ALL & ~filters.COMMAND, get_content)],
-        ASK_BUTTON_TEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_button_text)],
-        ASK_URL: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_url)],
-    },
-    fallbacks=[CommandHandler("cancel", cancel)],
-)
+    elif query.data == "remove_last":
+        if state["buttons"]:
+            removed = state["buttons"].pop()
+            await query.message.reply_text(f"Removed button: {removed.text}")
+        else:
+            await query.message.reply_text("No buttons to remove.")
+
+    elif query.data == "edit_last":
+        if state["buttons"]:
+            state["editing"] = True
+            state["step"] = "btn_text"
+            await query.message.reply_text("Send new text for last button.")
+        else:
+            await query.message.reply_text("No button to edit.")
+
+    elif query.data == "done_buttons":
+        content = state["content"]
+        buttons = InlineKeyboardMarkup([[btn] for btn in state["buttons"]])
+
+        try:
+            if content.photo:
+                await query.message.reply_photo(photo=content.photo[-1].file_id, reply_markup=buttons)
+            elif content.video:
+                await query.message.reply_video(video=content.video.file_id, reply_markup=buttons)
+            elif content.text:
+                await query.message.reply_text(text=content.text, reply_markup=buttons)
+            else:
+                await query.message.reply_text("Unsupported content.")
+        except Exception as e:
+            await query.message.reply_text(f"Error: {e}")
+
+        del user_data[user_id]
+
+# Edit flow
+async def edit_button_flow(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        return
+
+    state = user_data[user_id]
+
+    if state.get("editing"):
+        state["current_btn_text"] = update.message.text
+        state["step"] = "btn_url"
+        state["editing"] = "url"
+        await update.message.reply_text("Now send new URL for last button.")
+        return
+
+    if state.get("editing") == "url":
+        new_text = state.pop("current_btn_text")
+        new_url = update.message.text
+        state["buttons"][-1] = InlineKeyboardButton(new_text, url=new_url)
+        state["editing"] = False
+        state["step"] = "add_more"
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("➕ Add More Buttons", callback_data="add_more")],
+            [InlineKeyboardButton("✏️ Edit Last Button", callback_data="edit_last")],
+            [InlineKeyboardButton("➖ Remove Last Button", callback_data="remove_last")],
+            [InlineKeyboardButton("✅ Done", callback_data="done_buttons")]
+        ])
+        await update.message.reply_text("Last button updated!", reply_markup=keyboard)
+
+# Register handlers
+application.add_handler(CommandHandler("button", start_button))
+application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO, button_flow))
+application.add_handler(MessageHandler(filters.TEXT, edit_button_flow))
+application.add_handler(CallbackQueryHandler(button_callback, pattern="add_more|done_buttons|remove_last|edit_last"))
