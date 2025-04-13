@@ -4,8 +4,13 @@ from shivu import shivuu, collection, CHARA_CHANNEL_ID
 import os
 import requests
 from asyncio import Lock
+import json
 
-# Lock for ID safety
+# Load sudo users
+with open("sudo_users.json") as f:
+    sudo_users = json.load(f)
+
+# Lock for safe ID generation
 id_lock = Lock()
 active_ids = set()
 
@@ -16,7 +21,6 @@ rarity_map = {
     9: "💦 Wet Elegance", 10: "🎴 Cosplay"
 }
 
-# Format error text
 WRONG_FORMAT_TEXT = """Wrong ❌ format... eg: /upload reply to photo muzan-kibutsuji Demon-slayer 3
 
 Format: /upload reply character-name anime-name rarity-number
@@ -58,10 +62,8 @@ async def find_available_id():
                 return cid
         return str(max(map(int, ids), default=0) + 1).zfill(2)
 
-SUDO_USERS = [7756901810, 7640076990, 8156600797]
-
-# /upload Command - Upload
-@shivuu.on_message(filters.command("upload") & filters.user(SUDO_USERS))
+# /upload command
+@shivuu.on_message(filters.command("upload") & filters.user(list(map(int, sudo_users))))
 async def upload_character(client, message: Message):
     reply = message.reply_to_message
     if not reply or not (reply.photo or reply.document):
@@ -90,7 +92,7 @@ async def upload_character(client, message: Message):
             'id': available_id
         }
 
-        msg = await message.reply("<ᴘʀᴏᴄᴇꜱꜱɪɴɢ>...")
+        msg = await message.reply("Processing...")
         path = await reply.download()
         url = upload_to_catbox(path)
         character['img_url'] = url
@@ -119,8 +121,8 @@ async def upload_character(client, message: Message):
         async with id_lock:
             active_ids.discard(available_id)
 
-# /update Command - Update character
-@shivuu.on_message(filters.command("update") & filters.user(SUDO_USERS))
+# /update image of character
+@shivuu.on_message(filters.command("update") & filters.user(list(map(int, sudo_users))))
 async def update_character(client, message: Message):
     reply = message.reply_to_message
     if not reply or not (reply.photo or reply.document):
@@ -150,8 +152,8 @@ async def update_character(client, message: Message):
         if os.path.exists(path):
             os.remove(path)
 
-# /del Command - Delete character
-@shivuu.on_message(filters.command("del") & filters.user(SUDO_USERS))
+# /del command
+@shivuu.on_message(filters.command("del") & filters.user(list(map(int, sudo_users))))
 async def delete_character(client, message: Message):
     args = message.text.split()
     if len(args) != 2:
