@@ -1,44 +1,35 @@
 from pyrogram import filters
 from pyrogram.types import Message
-from shivu import shivuu, collection, CHARA_CHANNEL_ID
+from shivu import shivuu, collection, CHARA_CHANNEL_ID, sudo_users
 import os
 import requests
 from asyncio import Lock
 import json
-
-# Load sudo users
-with open("sudo_users.json") as f:
-    sudo_users = json.load(f)
-
-# Lock for safe ID generation
+# JSON persistence
+SUDO_FILE = "sudo_users.json"
+def save_sudo():
+    with open(SUDO_FILE, "w") as f:
+        json.dump(sudo_users, f)
+def load_sudo():
+    global sudo_users
+    try:
+        with open(SUDO_FILE) as f:
+            sudo_users[:] = json.load(f)
+    except:
+        pass
+load_sudo()
+# Lock for ID safety
 id_lock = Lock()
 active_ids = set()
-
 # Rarity Map
 rarity_map = {
-    1: "⚪ Common", 2: "🟣 Rare", 3: "🟢 Medium", 4: "🟡 Legendary", 5: "💮 Special Edition",
-    6: "🔮 Limited Edition", 7: "🎐 Celestial Beauty", 8: "🪽 Divine Edition", 
+    1: "⚪  Common", 2: "🟣 Rare", 3: "🟢 Medium", 4: "🟡 Legendary", 5: "💮 Special Edition",
+    6: "🔮 Limited Edition", 7: "🎐 Celestial Beauty", 8: "🪽 Divine Edition",
     9: "💦 Wet Elegance", 10: "🎴 Cosplay"
 }
-
-WRONG_FORMAT_TEXT = """Wrong ❌ format... eg: /upload reply to photo muzan-kibutsuji Demon-slayer 3
-
+WRONG_FORMAT_TEXT = """Wrong ❌  format... eg: /upload reply to photo muzan-kibutsuji Demon-slayer 3
 Format: /upload reply character-name anime-name rarity-number
-
-Rarity Map:
-1: ⚪ Common
-2: 🟣 Rare
-3: 🟢 Medium
-4: 🟡 Legendary
-5: 💮 Special Edition
-6: 🔮 Limited Edition
-7: 🎐 Celestial Beauty
-8: 🪽 Divine Edition
-9: 💦 Wet Elegance
-10: 🎴 Cosplay
 """
-
-# Catbox Upload Function
 def upload_to_catbox(file_path):
     url = "https://catbox.moe/user/api.php"
     payload = {'reqtype': 'fileupload'}
@@ -49,8 +40,6 @@ def upload_to_catbox(file_path):
         return response.text.strip()
     else:
         raise Exception("Catbox upload failed.")
-
-# ID Generator
 async def find_available_id():
     async with id_lock:
         cursor = collection.find().sort('id', 1)
@@ -61,18 +50,14 @@ async def find_available_id():
                 active_ids.add(cid)
                 return cid
         return str(max(map(int, ids), default=0) + 1).zfill(2)
-
-# /upload command
 @shivuu.on_message(filters.command("upload") & filters.user(list(map(int, sudo_users))))
 async def upload_character(client, message: Message):
     reply = message.reply_to_message
     if not reply or not (reply.photo or reply.document):
         return await message.reply_text("Please reply to a photo or document.")
-
     args = message.text.split()
     if len(args) != 4:
         return await message.reply_text(WRONG_FORMAT_TEXT)
-
     try:
         name = args[1].replace("-", " ").title()
         anime = args[2].replace("-", " ").title()
@@ -82,7 +67,6 @@ async def upload_character(client, message: Message):
         rarity = rarity_map[rarity_num]
     except:
         return await message.reply_text(WRONG_FORMAT_TEXT)
-
     try:
         available_id = await find_available_id()
         character = {
@@ -91,14 +75,11 @@ async def upload_character(client, message: Message):
             'rarity': rarity,
             'id': available_id
         }
-
-        msg = await message.reply("Processing...")
+        msg = await message.reply("<ᴘʀᴏᴄᴇꜱꜱɪɴɢ>...")
         path = await reply.download()
         url = upload_to_catbox(path)
         character['img_url'] = url
-
         await collection.insert_one(character)
-
         await client.send_photo(
             chat_id=CHARA_CHANNEL_ID,
             photo=url,
@@ -110,58 +91,44 @@ async def upload_character(client, message: Message):
                 f"Added by [{message.from_user.first_name}](tg://user?id={message.from_user.id})"
             )
         )
-        await msg.edit(f"✅ CHARACTER ADDED\nID: `{available_id}`")
-
+        await msg.edit(f"✅  CHARACTER ADDED\nID: `{available_id}`")
     except Exception as e:
         await message.reply_text(f"Upload failed: {e}")
-
     finally:
         if os.path.exists(path):
             os.remove(path)
         async with id_lock:
             active_ids.discard(available_id)
-
-# /update image of character
 @shivuu.on_message(filters.command("update") & filters.user(list(map(int, sudo_users))))
 async def update_character(client, message: Message):
     reply = message.reply_to_message
     if not reply or not (reply.photo or reply.document):
         return await message.reply("Reply to a new image of the character.")
-
     args = message.text.split()
     if len(args) != 2:
         return await message.reply("Use: /update <character_id> (as reply to image)")
-
     cid = args[1]
     character = await collection.find_one({"id": cid})
     if not character:
         return await message.reply("Character ID not found.")
-
     try:
         msg = await message.reply("Updating image...")
         path = await reply.download()
         url = upload_to_catbox(path)
-
         await collection.update_one({"id": cid}, {"$set": {"img_url": url}})
-        await msg.edit("✅ Character image updated.")
-
+        await msg.edit("✅  Character image updated.")
     except Exception as e:
         await message.reply(f"Update failed: {e}")
-
     finally:
         if os.path.exists(path):
             os.remove(path)
-
-# /del command
 @shivuu.on_message(filters.command("del") & filters.user(list(map(int, sudo_users))))
 async def delete_character(client, message: Message):
     args = message.text.split()
     if len(args) != 2:
         return await message.reply("Use: /del <character_id>")
-
     cid = args[1]
     result = await collection.delete_one({"id": cid})
     if result.deleted_count == 0:
         return await message.reply("Character not found.")
-    
-    await message.reply(f"✅ Character `{cid}` deleted.")
+    await message.reply(f"✅  Character `{cid}` deleted.")
