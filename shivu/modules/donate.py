@@ -2,7 +2,11 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackContext
 from shivu import application
 
-DONATE_IMG = "https://graph.org/file/83e4be836d2030b3abed2-2bb73dde11d2894e58.jpg"
+# Image shown in the message
+DONATE_IMG = "https://graph.org/vTelegraphBot-04-13-16"
+
+# Button image or donation page (set as URL)
+BUTTON_IMG_URL = "https://graph.org/file/83e4be836d2030b3abed2-2bb73dde11d2894e58.jpg"
 
 DONATE_TEXT = (
     "Hey kind soul,\n\n"
@@ -12,7 +16,7 @@ DONATE_TEXT = (
     "Much love, from the devs!"
 )
 
-DONATE_BTN = [[InlineKeyboardButton("🎐 Donate For Our Work 🪽", url="https://t.me/YourDonationLink")]]  # <- Replace this URL with your actual donation/pay link
+DONATE_BTN = [[InlineKeyboardButton("🎐 Donate For Our Work 🪽", url=BUTTON_IMG_URL)]]
 
 async def donate(update: Update, context: CallbackContext):
     await update.message.reply_photo(
