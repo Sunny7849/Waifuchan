@@ -1,6 +1,12 @@
-from telegram import Update, TelegramError
+from telegram import Update
 from telegram.ext import CommandHandler, CallbackContext
 from shivu import application, pm_users
+
+# Try to import TelegramError safely
+try:
+    from telegram.error import TelegramError
+except ImportError:
+    TelegramError = Exception  # fallback
 
 OWNER_ID = 8156600797
 GROUP_ID = -1002439979524
@@ -10,7 +16,7 @@ DENY_MSG = "🎐I've been summoned by Dogesh Bhai🍷 You can't control me!"
 REPLY_MSG = "🍃Reply to a message to broadcast it."
 DONE_MSG = "💫Broadcast sent to all successfully."
 
-# Helper function to send message with buttons (if any)
+# Helper function to forward messages with inline buttons
 async def forward_with_buttons(context: CallbackContext, chat_id, msg):
     try:
         if msg.text:
@@ -45,7 +51,7 @@ async def forward_with_buttons(context: CallbackContext, chat_id, msg):
     except TelegramError:
         pass
 
-# /broadcast to PM users
+# /broadcast command
 async def broadcast(update: Update, context: CallbackContext):
     if update.effective_user.id != OWNER_ID:
         return await update.message.reply_text(DENY_MSG)
@@ -59,7 +65,7 @@ async def broadcast(update: Update, context: CallbackContext):
 
     await update.message.reply_text(DONE_MSG)
 
-# /gbroadcast to group
+# /gbroadcast command
 async def gbroadcast(update: Update, context: CallbackContext):
     if update.effective_user.id != OWNER_ID:
         return await update.message.reply_text(DENY_MSG)
@@ -71,7 +77,7 @@ async def gbroadcast(update: Update, context: CallbackContext):
     await forward_with_buttons(context, GROUP_ID, msg)
     await update.message.reply_text("✅ Sent to group.")
 
-# /cbroadcast to channel
+# /cbroadcast command
 async def cbroadcast(update: Update, context: CallbackContext):
     if update.effective_user.id != OWNER_ID:
         return await update.message.reply_text(DENY_MSG)
