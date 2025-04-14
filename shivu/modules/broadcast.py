@@ -1,15 +1,15 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CommandHandler, CallbackContext
-from telegram.error import TelegramError
-from shivu import application, pm_users
+from shivu import application, pm_users  # Your MongoDB user database
+from telegram.constants import ParseMode
 
-OWNER_ID = 8156600797
+OWNER_ID = 8156600797  # Your Telegram user ID
 
 DENY_MSG = "🎐I've been summoned by Dogesh Bhai🍷 You can't control me!"
 REPLY_MSG = "🍃Reply to a message to broadcast it."
-DONE_MSG = "💫Broadcast sent to all successfully.\nProcess Completed Brother 🍷"
+DONE_MSG = "**Sensei i've Completed The Broadcast If you have any other work you need done, let me know🎐**"
 
-# Helper to forward with buttons & formatting
+# Helper function
 async def forward_with_buttons(context: CallbackContext, chat_id, msg):
     try:
         if msg.text:
@@ -19,19 +19,19 @@ async def forward_with_buttons(context: CallbackContext, chat_id, msg):
                 entities=msg.entities,
                 reply_markup=msg.reply_markup
             )
-        elif msg.caption and msg.photo:
+        elif msg.photo:
             await context.bot.send_photo(
                 chat_id=chat_id,
                 photo=msg.photo[-1].file_id,
-                caption=msg.caption,
+                caption=msg.caption or "",
                 caption_entities=msg.caption_entities,
                 reply_markup=msg.reply_markup
             )
-        elif msg.caption and msg.video:
+        elif msg.video:
             await context.bot.send_video(
                 chat_id=chat_id,
                 video=msg.video.file_id,
-                caption=msg.caption,
+                caption=msg.caption or "",
                 caption_entities=msg.caption_entities,
                 reply_markup=msg.reply_markup
             )
@@ -41,10 +41,10 @@ async def forward_with_buttons(context: CallbackContext, chat_id, msg):
                 from_chat_id=msg.chat_id,
                 message_id=msg.message_id
             )
-    except TelegramError:
-        pass
+    except Exception as e:
+        pass  # Avoid stopping the loop for one user error
 
-# Main broadcast command
+# Broadcast command
 async def broadcast(update: Update, context: CallbackContext):
     if update.effective_user.id != OWNER_ID:
         return await update.message.reply_text(DENY_MSG)
@@ -56,7 +56,7 @@ async def broadcast(update: Update, context: CallbackContext):
     async for user in pm_users.find():
         await forward_with_buttons(context, user['_id'], msg)
 
-    await update.message.reply_text(DONE_MSG)
+    await update.message.reply_text(DONE_MSG, parse_mode=ParseMode.MARKDOWN)
 
 # Register handler
 application.add_handler(CommandHandler("broadcast", broadcast))
