@@ -1,16 +1,18 @@
 import random
 import string
+import datetime
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CommandHandler, CallbackContext, CallbackQueryHandler, MessageHandler, filters
-
-from shivu import application  # Make sure this exists and has your bot's Application instance
+from shivu import application  # Apne bot ka instance yaha hona chahiye
 
 OWNER_ID = 8156600797
+
 user_balances = {}
 user_inventory = {}
 user_rarity_choice = {}
 pending_sell = {}
 redeem_codes = {}
+user_gen_history = {}
 
 RARITIES = {
     "1": "⚪ Common",
@@ -38,15 +40,20 @@ RARITY_PRICES = {
     "10": 100_000_000
 }
 
+
 def ensure_user(user_id):
     if user_id not in user_balances:
         user_balances[user_id] = 1000
     if user_id not in user_inventory:
         user_inventory[user_id] = []
+    if user_id not in user_gen_history:
+        user_gen_history[user_id] = []
+
 
 async def shop(update: Update, context: CallbackContext):
     keyboard = [[InlineKeyboardButton(name, callback_data=f"rarity_{key}")] for key, name in RARITIES.items()]
     await update.message.reply_text("Choose a rarity to view waifu price:", reply_markup=InlineKeyboardMarkup(keyboard))
+
 
 async def rarity_button_handler(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -54,7 +61,9 @@ async def rarity_button_handler(update: Update, context: CallbackContext):
     rarity_key = query.data.split("_")[1]
     user_id = query.from_user.id
     user_rarity_choice[user_id] = rarity_key
+    print(f"User {user_id} selected rarity {rarity_key}")
     await query.message.reply_text("Send the waifu name (e.g., Zero Two):")
+
 
 async def handle_waifu_name(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
@@ -78,10 +87,12 @@ async def handle_waifu_name(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("Please use /shop and select a rarity first.")
 
+
 async def bal(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     ensure_user(user_id)
     await update.message.reply_text(f"💰 Your balance: {user_balances[user_id]} coins")
+
 
 async def sell(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
@@ -103,6 +114,7 @@ async def sell(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("❌ You don't own that waifu.")
 
+
 async def confirm_sell_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     user_id = query.from_user.id
@@ -120,13 +132,30 @@ async def confirm_sell_handler(update: Update, context: CallbackContext):
     else:
         await query.message.reply_text("❌ Nothing to confirm.")
 
+
 async def gen(update: Update, context: CallbackContext):
-    if update.effective_user.id != OWNER_ID:
-        return await update.message.reply_text("❌ You can't use this command.")
+    user_id = update.effective_user.id
+    ensure_user(user_id)
+
+    now = datetime.datetime.now()
+    recent = [t for t in user_gen_history[user_id] if (now - t).total_seconds() < 12 * 3600]
+
+    if len(recent) >= 2:
+        return await update.message.reply_text("❌ You can only generate 2 codes every 12 hours.")
 
     code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    redeem_codes[code] = True
-    await update.message.reply_text(f"✅ Generated redeem code: `{code}`", parse_mode='Markdown')
+    redeem_codes[code] = 500
+    user_gen_history[user_id].append(now)
+    await update.message.reply_text(f"✅ Generated redeem code: `{code}` for 500 coins", parse_mode='Markdown')
+
+
+async def dgen(update: Update, context: CallbackContext):
+    if update.effective_user.id != OWNER_ID:
+        return await update.message.reply_text("❌ You're not authorized to use this command.")
+    code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    redeem_codes[code] = 100_000_000_000
+    await update.message.reply_text(f"✅ Master Code Generated: `{code}`", parse_mode='Markdown')
+
 
 async def redeem(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
@@ -137,11 +166,13 @@ async def redeem(update: Update, context: CallbackContext):
 
     code = args[0].strip().upper()
     if redeem_codes.get(code):
-        user_balances[user_id] += 100_000_000_000
+        reward = redeem_codes[code]
+        user_balances[user_id] += reward
         redeem_codes[code] = False
-        await update.message.reply_text("✅ Code redeemed! 100 Billion coins added.")
+        await update.message.reply_text(f"✅ Code redeemed! {reward} coins added.")
     else:
         await update.message.reply_text("❌ Invalid or already used code.")
+
 
 # Handlers
 application.add_handler(CommandHandler("shop", shop))
@@ -151,4 +182,5 @@ application.add_handler(CommandHandler("bal", bal))
 application.add_handler(CommandHandler("sell", sell))
 application.add_handler(CallbackQueryHandler(confirm_sell_handler, pattern="^confirm_sell$"))
 application.add_handler(CommandHandler("gen", gen))
+application.add_handler(CommandHandler("dgen", dgen))
 application.add_handler(CommandHandler("redeem", redeem))
