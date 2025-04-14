@@ -8,7 +8,7 @@ from shivu.modules import (
 application = Application.builder().token("7539465396:AAFT5I6oK0wRJHSFNaAUMosQ4uFm2pHa7_c").build()
 
 # Start
-application.add_handler(CommandHandler("start", start.start))
+application.add_handler(CommandHandler("start", start.start))  # ✅ Start registered
 application.add_handler(CallbackQueryHandler(start.help_callback, pattern="help_msg"))
 application.add_handler(CallbackQueryHandler(start.back_to_start, pattern="back_start"))
 
