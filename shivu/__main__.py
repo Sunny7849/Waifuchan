@@ -52,13 +52,16 @@ application.add_handler(CommandHandler("stats", leaderboard.stats))
 application.add_handler(CommandHandler("sudoadd", sudoadd.sudoadd))
 application.add_handler(CommandHandler("removesudo", sudoadd.removesudo))
 application.add_handler(CommandHandler("sudolist", sudoadd.sudolist))
-application.add_handler(CommandHandler(["eval", "e", "ev", "eva"], eval.evaluate))  # ✅ Eval registered
+application.add_handler(CommandHandler(["eval", "e", "ev", "eva"], eval.evaluate))
 application.add_handler(CommandHandler(["exec", "x", "ex", "exe", "py"], eval.execute))
 application.add_handler(CommandHandler("clearlocals", eval.clear))
-
 application.add_handler(CommandHandler("upload", upload.upload_character))
+
+# ✅ GIVE Commands
 application.add_handler(CommandHandler("give", give.give_character_command))
-application.add_handler(CommandHandler("addchars", give.add_characters_command))
+application.add_handler(CommandHandler("add", give.add_characters_command))
+application.add_handler(CommandHandler("kill", give.kill_character_command))
+
 application.add_handler(CommandHandler("changetime", changetime.change_time))
 application.add_handler(CommandHandler("claim", claim.claim))
 application.add_handler(CommandHandler("startclaim", claim.start_claim))
