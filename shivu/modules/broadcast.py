@@ -1,17 +1,15 @@
 from telegram import Update
 from telegram.ext import CommandHandler, CallbackContext
 from telegram.error import TelegramError
-from shivu import application, pm_users  # pm_users = MongoDB collection of user IDs
+from shivu import application, pm_users
 
 OWNER_ID = 8156600797
-GROUP_ID = -1002439979524
-CHANNEL_ID = -1002646820042
 
 DENY_MSG = "🎐I've been summoned by Dogesh Bhai🍷 You can't control me!"
 REPLY_MSG = "🍃Reply to a message to broadcast it."
-DONE_MSG = "💫Broadcast sent to all successfully.\n\nProcess Completed Brother 🍷"
+DONE_MSG = "💫Broadcast sent to all successfully.\nProcess Completed Brother 🍷"
 
-# Helper function to forward messages with inline buttons
+# Helper to forward with buttons & formatting
 async def forward_with_buttons(context: CallbackContext, chat_id, msg):
     try:
         if msg.text:
@@ -21,19 +19,19 @@ async def forward_with_buttons(context: CallbackContext, chat_id, msg):
                 entities=msg.entities,
                 reply_markup=msg.reply_markup
             )
-        elif msg.photo:
+        elif msg.caption and msg.photo:
             await context.bot.send_photo(
                 chat_id=chat_id,
                 photo=msg.photo[-1].file_id,
-                caption=msg.caption or "",
+                caption=msg.caption,
                 caption_entities=msg.caption_entities,
                 reply_markup=msg.reply_markup
             )
-        elif msg.video:
+        elif msg.caption and msg.video:
             await context.bot.send_video(
                 chat_id=chat_id,
                 video=msg.video.file_id,
-                caption=msg.caption or "",
+                caption=msg.caption,
                 caption_entities=msg.caption_entities,
                 reply_markup=msg.reply_markup
             )
@@ -46,7 +44,7 @@ async def forward_with_buttons(context: CallbackContext, chat_id, msg):
     except TelegramError:
         pass
 
-# /broadcast command
+# Main broadcast command
 async def broadcast(update: Update, context: CallbackContext):
     if update.effective_user.id != OWNER_ID:
         return await update.message.reply_text(DENY_MSG)
@@ -60,31 +58,5 @@ async def broadcast(update: Update, context: CallbackContext):
 
     await update.message.reply_text(DONE_MSG)
 
-# /gbroadcast command
-async def gbroadcast(update: Update, context: CallbackContext):
-    if update.effective_user.id != OWNER_ID:
-        return await update.message.reply_text(DENY_MSG)
-
-    if not update.message.reply_to_message:
-        return await update.message.reply_text(REPLY_MSG)
-
-    msg = update.message.reply_to_message
-    await forward_with_buttons(context, GROUP_ID, msg)
-    await update.message.reply_text("✅ Sent to group.\n\nProcess Completed Brother 🍷")
-
-# /cbroadcast command
-async def cbroadcast(update: Update, context: CallbackContext):
-    if update.effective_user.id != OWNER_ID:
-        return await update.message.reply_text(DENY_MSG)
-
-    if not update.message.reply_to_message:
-        return await update.message.reply_text(REPLY_MSG)
-
-    msg = update.message.reply_to_message
-    await forward_with_buttons(context, CHANNEL_ID, msg)
-    await update.message.reply_text("✅ Sent to channel.\n\nProcess Completed Brother 🍷")
-
-# Register command handlers
+# Register handler
 application.add_handler(CommandHandler("broadcast", broadcast))
-application.add_handler(CommandHandler("gbroadcast", gbroadcast))
-application.add_handler(CommandHandler("cbroadcast", cbroadcast))
