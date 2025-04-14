@@ -1,82 +1,159 @@
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
-from shivu.modules import (
-    start, shop, broadcast, harem, marry, redeem, ping, donate, sexplore,
-    rocket, trade, leaderboard, sudoadd, eval, upload, give, changetime,
-    claim, transfer, button, check
-)
+import importlib
+import time
+import random
+import re
+import asyncio
+from html import escape
 
-application = Application.builder().token("7539465396:AAFT5I6oK0wRJHSFNaAUMosQ4uFm2pHa7_c").build()
+from pyrogram import filters
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from shivu import collection, top_global_groups_collection, group_user_totals_collection, user_collection, user_totals_collection, shivuu
+from shivu import SUPPORT_CHAT, UPDATE_CHAT, db, LOGGER
+from shivu.modules import ALL_MODULES
 
-# Start
-application.add_handler(CommandHandler("start", start.start))  # ✅ Start registered
-application.add_handler(CallbackQueryHandler(start.help_callback, pattern="help_msg"))
-application.add_handler(CallbackQueryHandler(start.back_to_start, pattern="back_start"))
+locks = {}
+message_counters = {}
+spam_counters = {}
+last_characters = {}
+sent_characters = {}
+first_correct_guesses = {}
+message_counts = {}
 
-# Shop-related
-application.add_handler(CommandHandler("shop", shop.shop))
-application.add_handler(CommandHandler("buy", shop.buy))
-application.add_handler(CommandHandler("bal", shop.bal))
-application.add_handler(CommandHandler("gen", shop.gen))
-application.add_handler(CommandHandler("dgen", shop.dgen))
-application.add_handler(CommandHandler("redeem", shop.redeem))
-application.add_handler(CommandHandler("sell", shop.sell))
+for module_name in ALL_MODULES:
+    imported_module = importlib.import_module("shivu.modules." + module_name)
 
-# Broadcast
-application.add_handler(CommandHandler("broadcast", broadcast.broadcast))
+last_user = {}
+warned_users = {}
 
-# Harem system
-application.add_handler(CommandHandler("harem", harem.harem))
+def escape_markdown(text):
+    escape_chars = r'\*_`\\~>#+-=|{}.!'
+    return re.sub(r'([%s])' % re.escape(escape_chars), r'\\\1', text)
 
-# Marry system
-application.add_handler(CommandHandler("marry", marry.marry))
-application.add_handler(CommandHandler("divorce", marry.divorce))
+async def message_counter(_, message: Message) -> None:
+    chat_id = str(message.chat.id)
+    user_id = message.from_user.id
 
-# Redeem features
-application.add_handler(CommandHandler("waifugen", redeem.waifugen))
-application.add_handler(CommandHandler("claimwaifu", redeem.claimwaifu))
+    if chat_id not in locks:
+        locks[chat_id] = asyncio.Lock()
+    lock = locks[chat_id]
 
-# Simple utilities
-application.add_handler(CommandHandler("ping", ping.ping))
-application.add_handler(CommandHandler("donate", donate.donate))
+    async with lock:
+        chat_frequency = await user_totals_collection.find_one({'chat_id': chat_id})
+        message_frequency = chat_frequency.get('message_frequency', 100) if chat_frequency else 100
 
-# Extra
-application.add_handler(CommandHandler("sexplore", sexplore.random_daily_reward))
-application.add_handler(CommandHandler("rocket", rocket.rocket))
-application.add_handler(CommandHandler("ptrade", rocket.ptrade))
-application.add_handler(CommandHandler("trade", trade.trade))
-application.add_handler(CommandHandler("gift", trade.gift))
-application.add_handler(CommandHandler("leaderboard", leaderboard.leaderboard))
-application.add_handler(CommandHandler("stats", leaderboard.stats))
+        if chat_id in last_user and last_user[chat_id]['user_id'] == user_id:
+            last_user[chat_id]['count'] += 1
+            if last_user[chat_id]['count'] >= 10:
+                if user_id in warned_users and time.time() - warned_users[user_id] < 600:
+                    return
+                await message.reply_text(f"⚠️ Don't Spam {message.from_user.first_name}...\nYour Messages Will be ignored for 10 Minutes...")
+                warned_users[user_id] = time.time()
+                return
+        else:
+            last_user[chat_id] = {'user_id': user_id, 'count': 1}
 
-# Admin/Dev
-application.add_handler(CommandHandler("sudoadd", sudoadd.sudoadd))
-application.add_handler(CommandHandler("removesudo", sudoadd.removesudo))
-application.add_handler(CommandHandler("sudolist", sudoadd.sudolist))
-application.add_handler(CommandHandler(["eval", "e", "ev", "eva"], eval.evaluate))
-application.add_handler(CommandHandler(["exec", "x", "ex", "exe", "py"], eval.execute))
-application.add_handler(CommandHandler("clearlocals", eval.clear))
-application.add_handler(CommandHandler("upload", upload.upload_character))
+        message_counts[chat_id] = message_counts.get(chat_id, 0) + 1
 
-# ✅ GIVE Commands
-application.add_handler(CommandHandler("give", give.give_character_command))
-application.add_handler(CommandHandler("add", give.add_characters_command))
-application.add_handler(CommandHandler("kill", give.kill_character_command))
+        if message_counts[chat_id] % message_frequency == 0:
+            await send_image(message)
+            message_counts[chat_id] = 0
 
-application.add_handler(CommandHandler("changetime", changetime.change_time))
-application.add_handler(CommandHandler("claim", claim.claim))
-application.add_handler(CommandHandler("startclaim", claim.start_claim))
-application.add_handler(CommandHandler("stopclaim", claim.stop_claim))
-application.add_handler(CommandHandler("transfer", transfer.transfer))
-application.add_handler(CommandHandler("ik", check.find_users))
-application.add_handler(CommandHandler("check", check.check_character))
-application.add_handler(CallbackQueryHandler(check.handle_callback_query, pattern="slaves_"))
+async def send_image(message: Message) -> None:
+    chat_id = message.chat.id
+    all_characters = list(await collection.find({}).to_list(length=None))
 
-# Button system
-application.add_handler(CommandHandler("button", button.start_button))
-application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO, button.button_flow))
-application.add_handler(MessageHandler(filters.TEXT, button.edit_button_flow))
-application.add_handler(CallbackQueryHandler(button.button_callback, pattern="add_more|done_buttons|remove_last|edit_last"))
+    if chat_id not in sent_characters:
+        sent_characters[chat_id] = []
 
-# Run the bot
+    if len(sent_characters[chat_id]) == len(all_characters):
+        sent_characters[chat_id] = []
+
+    character = random.choice([c for c in all_characters if c['id'] not in sent_characters[chat_id]])
+
+    sent_characters[chat_id].append(character['id'])
+    last_characters[chat_id] = character
+    if chat_id in first_correct_guesses:
+        del first_correct_guesses[chat_id]
+
+    await shivuu.send_photo(
+        chat_id=chat_id,
+        photo=character['img_url'],
+        caption=f"A New {character['rarity']} SealWaifu💫 Appeared...\n/slavewaifu Character Name and add in Your Sealwaifu Collection 👾"
+    )
+
+@shivuu.on_message(filters.command(["slavewaifu", "protecc", "collect", "grab", "hunt"]))
+async def guess(_, message: Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    if chat_id not in last_characters:
+        return
+
+    if chat_id in first_correct_guesses:
+        await message.reply_text("❌ Already Guessed By Someone.. Try Next Time Bruhh")
+        return
+
+    guess = " ".join(message.command[1:]).lower()
+
+    if "()" in guess or "&" in guess.lower():
+        await message.reply_text("Nahh You Can't use This Types of words in your guess..❌️")
+        return
+
+    name_parts = last_characters[chat_id]['name'].lower().split()
+
+    if sorted(name_parts) == sorted(guess.split()) or any(part == guess for part in name_parts):
+        first_correct_guesses[chat_id] = user_id
+        user = await user_collection.find_one({'id': user_id})
+        if user:
+            await user_collection.update_one({'id': user_id}, {'$push': {'characters': last_characters[chat_id]}})
+        else:
+            await user_collection.insert_one({
+                'id': user_id,
+                'username': message.from_user.username,
+                'first_name': message.from_user.first_name,
+                'characters': [last_characters[chat_id]],
+            })
+
+        await message.reply_text(
+            f"<b><a href='tg://user?id={user_id}'>{escape(message.from_user.first_name)}</a></b> You Guessed a New Character ✅️\n\n"
+            f"𝗡𝗔𝗠𝗘: <b>{last_characters[chat_id]['name']}</b>\n"
+            f"𝗔𝗡𝗜𝗠𝗘: <b>{last_characters[chat_id]['anime']}</b>\n"
+            f"𝗥𝗔𝗜𝗥𝗧𝗬: <b>{last_characters[chat_id]['rarity']}</b>\n\n"
+            f"This Character added in Your harem.. use /harem To see your harem",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Seal Waifu💫", switch_inline_query_current_chat=f"collection.{user_id}")]]
+            )
+        )
+    else:
+        await message.reply_text("Please Write Correct Character Name... ❌️")
+
+@shivuu.on_message(filters.command("fav"))
+async def fav(_, message: Message):
+    user_id = message.from_user.id
+    args = message.command
+    if len(args) < 2:
+        await message.reply_text("Please provide Character id...")
+        return
+
+    character_id = args[1]
+    user = await user_collection.find_one({'id': user_id})
+    if not user:
+        await message.reply_text("You have not Guessed any characters yet....")
+        return
+
+    character = next((c for c in user['characters'] if c['id'] == character_id), None)
+    if not character:
+        await message.reply_text("This Character is Not In your collection")
+        return
+
+    await user_collection.update_one({'id': user_id}, {'$set': {'favorites': [character_id]}})
+    await message.reply_text(f"Character {character['name']} has been added to your favorite...")
+
+@shivuu.on_message(filters.all & filters.group)
+async def message_track(client, message):
+    await message_counter(client, message)
+
 if __name__ == "__main__":
-    application.run_polling()
+    LOGGER.info("Starting bot...")
+    shivuu.run()
