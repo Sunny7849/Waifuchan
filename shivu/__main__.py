@@ -9,6 +9,8 @@ application = Application.builder().token("7539465396:AAFT5I6oK0wRJHSFNaAUMosQ4u
 
 # Start
 application.add_handler(CommandHandler("start", start.start))
+application.add_handler(CallbackQueryHandler(start.help_callback, pattern="help_msg"))
+application.add_handler(CallbackQueryHandler(start.back_to_start, pattern="back_start"))
 
 # Shop-related
 application.add_handler(CommandHandler("shop", shop.shop))
