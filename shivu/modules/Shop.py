@@ -3,6 +3,8 @@ import string
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CommandHandler, CallbackContext, CallbackQueryHandler, MessageHandler, filters
 
+from shivu import application  # Make sure this exists and has your bot's Application instance
+
 OWNER_ID = 8156600797
 user_balances = {}
 user_inventory = {}
