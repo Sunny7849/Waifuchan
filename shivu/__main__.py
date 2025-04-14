@@ -2,7 +2,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 from shivu.modules import (
     start, shop, broadcast, harem, marry, redeem, ping, donate, sexplore,
     rocket, trade, leaderboard, sudoadd, eval, upload, give, changetime,
-    claim, transfer, button
+    claim, transfer, button, check  # ✅ check module added here
 )
 
 application = Application.builder().token("7539465396:AAFT5I6oK0wRJHSFNaAUMosQ4uFm2pHa7_c").build()
@@ -59,6 +59,7 @@ application.add_handler(CommandHandler("addchars", give.add_characters_command))
 application.add_handler(CommandHandler("changetime", changetime.change_time))
 application.add_handler(CommandHandler("claim", claim.claim))
 application.add_handler(CommandHandler("transfer", transfer.transfer))
+application.add_handler(CommandHandler("ik", check.find_users))  # ✅ /ik command added
 
 # Button system
 application.add_handler(CommandHandler("button", button.start_button))
