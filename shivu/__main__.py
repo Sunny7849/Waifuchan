@@ -2,7 +2,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 from shivu.modules import (
     start, shop, broadcast, harem, marry, redeem, ping, donate, sexplore,
     rocket, trade, leaderboard, sudoadd, eval, upload, give, changetime,
-    claim, transfer, button, check  # ✅ check & claim modules included
+    claim, transfer, button, check
 )
 
 application = Application.builder().token("7539465396:AAFT5I6oK0wRJHSFNaAUMosQ4uFm2pHa7_c").build()
@@ -52,14 +52,17 @@ application.add_handler(CommandHandler("stats", leaderboard.stats))
 application.add_handler(CommandHandler("sudoadd", sudoadd.sudoadd))
 application.add_handler(CommandHandler("removesudo", sudoadd.removesudo))
 application.add_handler(CommandHandler("sudolist", sudoadd.sudolist))
-application.add_handler(CommandHandler("eval", eval.evaluate))
+application.add_handler(CommandHandler(["eval", "e", "ev", "eva"], eval.evaluate))  # ✅ Eval registered
+application.add_handler(CommandHandler(["exec", "x", "ex", "exe", "py"], eval.execute))
+application.add_handler(CommandHandler("clearlocals", eval.clear))
+
 application.add_handler(CommandHandler("upload", upload.upload_character))
 application.add_handler(CommandHandler("give", give.give_character_command))
 application.add_handler(CommandHandler("addchars", give.add_characters_command))
 application.add_handler(CommandHandler("changetime", changetime.change_time))
-application.add_handler(CommandHandler("claim", claim.claim))  # ✅ /claim
-application.add_handler(CommandHandler("startclaim", claim.start_claim))  # ✅ /startclaim
-application.add_handler(CommandHandler("stopclaim", claim.stop_claim))  # ✅ /stopclaim
+application.add_handler(CommandHandler("claim", claim.claim))
+application.add_handler(CommandHandler("startclaim", claim.start_claim))
+application.add_handler(CommandHandler("stopclaim", claim.stop_claim))
 application.add_handler(CommandHandler("transfer", transfer.transfer))
 application.add_handler(CommandHandler("ik", check.find_users))
 application.add_handler(CommandHandler("check", check.check_character))
