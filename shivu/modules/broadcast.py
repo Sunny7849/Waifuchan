@@ -1,12 +1,7 @@
 from telegram import Update
 from telegram.ext import CommandHandler, CallbackContext
-from shivu import application, pm_users
-
-# Try to import TelegramError safely
-try:
-    from telegram.error import TelegramError
-except ImportError:
-    TelegramError = Exception  # fallback
+from telegram.error import TelegramError
+from shivu import application, pm_users  # pm_users = MongoDB collection of user IDs
 
 OWNER_ID = 8156600797
 GROUP_ID = -1002439979524
@@ -14,7 +9,7 @@ CHANNEL_ID = -1002646820042
 
 DENY_MSG = "🎐I've been summoned by Dogesh Bhai🍷 You can't control me!"
 REPLY_MSG = "🍃Reply to a message to broadcast it."
-DONE_MSG = "💫Broadcast sent to all successfully."
+DONE_MSG = "💫Broadcast sent to all successfully.\n\nProcess Completed Brother 🍷"
 
 # Helper function to forward messages with inline buttons
 async def forward_with_buttons(context: CallbackContext, chat_id, msg):
@@ -75,7 +70,7 @@ async def gbroadcast(update: Update, context: CallbackContext):
 
     msg = update.message.reply_to_message
     await forward_with_buttons(context, GROUP_ID, msg)
-    await update.message.reply_text("✅ Sent to group.")
+    await update.message.reply_text("✅ Sent to group.\n\nProcess Completed Brother 🍷")
 
 # /cbroadcast command
 async def cbroadcast(update: Update, context: CallbackContext):
@@ -87,9 +82,9 @@ async def cbroadcast(update: Update, context: CallbackContext):
 
     msg = update.message.reply_to_message
     await forward_with_buttons(context, CHANNEL_ID, msg)
-    await update.message.reply_text("✅ Sent to channel.")
+    await update.message.reply_text("✅ Sent to channel.\n\nProcess Completed Brother 🍷")
 
-# Register handlers
+# Register command handlers
 application.add_handler(CommandHandler("broadcast", broadcast))
 application.add_handler(CommandHandler("gbroadcast", gbroadcast))
 application.add_handler(CommandHandler("cbroadcast", cbroadcast))
