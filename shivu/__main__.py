@@ -1,86 +1,76 @@
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ContextTypes
-from shivu import user_collection, collection
-from datetime import datetime, timedelta
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+from shivu.modules import (
+    start, shop, broadcast, harem, marry, redeem, ping, donate, sexplore,
+    rocket, trade, leaderboard, sudoadd, eval, upload, give, changetime,
+    claim, transfer, button, check  # ✅ check & claim modules included
+)
 
-DEVS = [8156600797]
-SUPPORT_CHAT_ID = -1002380442930
+application = Application.builder().token("7539465396:AAFT5I6oK0wRJHSFNaAUMosQ4uFm2pHa7_c").build()
 
-last_claim_time = {}
+# Start
+application.add_handler(CommandHandler("start", start.start))
+application.add_handler(CallbackQueryHandler(start.help_callback, pattern="help_msg"))
+application.add_handler(CallbackQueryHandler(start.back_to_start, pattern="back_start"))
 
-keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("Join Chat To Use Me", url="https://t.me/Anime_P_F_P")],
-    [InlineKeyboardButton("Join Chat To Use Me", url="https://t.me/+ZTeO__YsQoIwNTVl")]
-])
+# Shop-related
+application.add_handler(CommandHandler("shop", shop.shop))
+application.add_handler(CommandHandler("buy", shop.buy))
+application.add_handler(CommandHandler("bal", shop.bal))
+application.add_handler(CommandHandler("gen", shop.gen))
+application.add_handler(CommandHandler("dgen", shop.dgen))
+application.add_handler(CommandHandler("redeem", shop.redeem))
+application.add_handler(CommandHandler("sell", shop.sell))
 
-async def claim_toggle(state: str):
-    await collection.update_one({}, {"$set": {"claim": state}}, upsert=True)
+# Broadcast
+application.add_handler(CommandHandler("broadcast", broadcast.broadcast))
 
-async def get_claim_state():
-    doc = await collection.find_one({})
-    return doc.get("claim", "False")
+# Harem system
+application.add_handler(CommandHandler("harem", harem.harem))
 
-async def get_unique_characters(receiver_id, target_rarities=['(💮𝐌𝐲𝐭𝐡𝐢𝐜𝐚𝐥', '🔮𝐋𝐢𝐦𝐢𝐭𝐞𝐝 𝐄𝐝𝐢𝐭𝐢𝐨𝐧']):
-    try:
-        user = await user_collection.find_one({'id': receiver_id}, {'characters': 1})
-        owned_ids = [char['id'] for char in user.get('characters', [])] if user else []
+# Marry system
+application.add_handler(CommandHandler("marry", marry.marry))
+application.add_handler(CommandHandler("divorce", marry.divorce))
 
-        pipeline = [
-            {'$match': {'rarity': {'$in': target_rarities}, 'id': {'$nin': owned_ids}}},
-            {'$sample': {'size': 1}}
-        ]
-        cursor = collection.aggregate(pipeline)
-        characters = await cursor.to_list(length=None)
-        return characters
-    except Exception as e:
-        print(f"Error in get_unique_characters: {e}")
-        return []
+# Redeem features
+application.add_handler(CommandHandler("waifugen", redeem.waifugen))
+application.add_handler(CommandHandler("claimwaifu", redeem.claimwaifu))
 
-async def start_claim(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in DEVS:
-        return await update.message.reply_text("❌ Only developers can use this command.")
-    await claim_toggle("True")
-    await update.message.reply_text("✅ Claiming feature enabled!")
+# Simple utilities
+application.add_handler(CommandHandler("ping", ping.ping))
+application.add_handler(CommandHandler("donate", donate.donate))
 
-async def stop_claim(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in DEVS:
-        return await update.message.reply_text("❌ Only developers can use this command.")
-    await claim_toggle("False")
-    await update.message.reply_text("❌ Claiming feature disabled!")
+# Extra
+application.add_handler(CommandHandler("sexplore", sexplore.random_daily_reward))
+application.add_handler(CommandHandler("rocket", rocket.rocket))
+application.add_handler(CommandHandler("ptrade", rocket.ptrade))
+application.add_handler(CommandHandler("trade", trade.trade))
+application.add_handler(CommandHandler("gift", trade.gift))
+application.add_handler(CommandHandler("leaderboard", leaderboard.leaderboard))
+application.add_handler(CommandHandler("stats", leaderboard.stats))
 
-async def claim(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    chat = update.effective_chat
-    user_id = user.id
+# Admin/Dev
+application.add_handler(CommandHandler("sudoadd", sudoadd.sudoadd))
+application.add_handler(CommandHandler("removesudo", sudoadd.removesudo))
+application.add_handler(CommandHandler("sudolist", sudoadd.sudolist))
+application.add_handler(CommandHandler("eval", eval.evaluate))
+application.add_handler(CommandHandler("upload", upload.upload_character))
+application.add_handler(CommandHandler("give", give.give_character_command))
+application.add_handler(CommandHandler("addchars", give.add_characters_command))
+application.add_handler(CommandHandler("changetime", changetime.change_time))
+application.add_handler(CommandHandler("claim", claim.claim))  # ✅ /claim
+application.add_handler(CommandHandler("startclaim", claim.start_claim))  # ✅ /startclaim
+application.add_handler(CommandHandler("stopclaim", claim.stop_claim))  # ✅ /stopclaim
+application.add_handler(CommandHandler("transfer", transfer.transfer))
+application.add_handler(CommandHandler("ik", check.find_users))
+application.add_handler(CommandHandler("check", check.check_character))
+application.add_handler(CallbackQueryHandler(check.handle_callback_query, pattern="slaves_"))
 
-    if chat.id != SUPPORT_CHAT_ID:
-        return await update.message.reply_text("Command can only be used here: @Grabbing_Your_WH_Group")
+# Button system
+application.add_handler(CommandHandler("button", button.start_button))
+application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO, button.button_flow))
+application.add_handler(MessageHandler(filters.TEXT, button.edit_button_flow))
+application.add_handler(CallbackQueryHandler(button.button_callback, pattern="add_more|done_buttons|remove_last|edit_last"))
 
-    try:
-        member = await context.bot.get_chat_member(SUPPORT_CHAT_ID, user_id)
-        if member.status in ["left", "kicked"]:
-            return await update.message.reply_text("Join the chat to use this command.", reply_markup=keyboard)
-    except Exception:
-        return await update.message.reply_text("Join the chat to use this command.", reply_markup=keyboard)
-
-    if user_id == 7162166061:
-        return await update.message.reply_text("You're banned from using this command.")
-
-    claim_state = await get_claim_state()
-    if claim_state == "False":
-        return await update.message.reply_text("Claiming feature is currently disabled.")
-
-    now = datetime.now()
-    if user_id in last_claim_time and last_claim_time[user_id].date() == now.date():
-        return await update.message.reply_text("You've already claimed today. Come back tomorrow.")
-
-    last_claim_time[user_id] = now
-    characters = await get_unique_characters(user_id)
-
-    if characters:
-        await user_collection.update_one({'id': user_id}, {'$push': {'characters': {'$each': characters}}})
-        for char in characters:
-            caption = f"<b>ᴄᴏɴɢʀᴀᴛ𝘀 🎊 {user.mention_html()}!</b>\n\n<b>🎀 ɴᴀᴍᴇ :</b> {char['name']}\n<b>⚜️ ᴀɴɪᴍᴇ :</b> {char['anime']}\n\n<b>ᴄᴏᴍᴇ ᴀɢᴀɪɴ ᴛᴏᴍᴏʀʀᴏᴡ ғᴏʀ ɴᴇ𝘅ᴛ ᴄʟᴀɪᴍ 🍀</b>"
-            await update.message.reply_photo(photo=char['img_url'], caption=caption, parse_mode='HTML')
-    else:
-        await update.message.reply_text("No characters found for you to claim.")
+# Run the bot
+if __name__ == "__main__":
+    application.run_polling()
