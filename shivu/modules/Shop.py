@@ -2,9 +2,9 @@ import random
 import string
 import time
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import CommandHandler, CallbackContext, CallbackQueryHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler, MessageHandler, filters
 
-from shivu import application  # Apne bot ke Application object ka import
+from shivu import application  # Application object (assumed already set with your bot token)
 
 OWNER_ID = 8156600797
 user_balances = {}
@@ -12,7 +12,6 @@ user_inventory = {}
 user_rarity_choice = {}
 pending_sell = {}
 redeem_codes = {}
-
 user_gen_data = {}  # user_id: [count, last_time]
 
 RARITIES = {
@@ -135,7 +134,6 @@ async def gen(update: Update, context: CallbackContext):
     now = time.time()
     ensure_user(user_id)
 
-    # Only 2 times per day with 12 hours cooldown
     count, last_time = user_gen_data.get(user_id, (0, 0))
     if count >= 2 and now - last_time < 86400:
         return await update.message.reply_text("❌ You can only use /gen 2 times per day.")
@@ -177,6 +175,7 @@ application.add_handler(CommandHandler("redeem", redeem))
 
 application.add_handler(CallbackQueryHandler(rarity_button_handler, pattern=r"^rarity_\d+$"))
 application.add_handler(CallbackQueryHandler(confirm_sell_handler, pattern="^confirm_sell$"))
-
-# Last me message handler
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_waifu_name))
+
+# FINAL STEP TO START BOT
+application.run_polling()
