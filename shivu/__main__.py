@@ -1,8 +1,8 @@
-from telegram.ext import Application, CommandHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 from shivu.modules import (
     start, shop, broadcast, harem, marry, redeem, ping, donate, sexplore,
     rocket, trade, leaderboard, sudoadd, eval, upload, give, changetime,
-    claim, transfer
+    claim, transfer, button
 )
 
 application = Application.builder().token("7539465396:AAFT5I6oK0wRJHSFNaAUMosQ4uFm2pHa7_c").build()
@@ -57,6 +57,12 @@ application.add_handler(CommandHandler("addchars", give.add_characters_command))
 application.add_handler(CommandHandler("changetime", changetime.change_time))
 application.add_handler(CommandHandler("claim", claim.claim))
 application.add_handler(CommandHandler("transfer", transfer.transfer))
+
+# Button system
+application.add_handler(CommandHandler("button", button.start_button))
+application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO | filters.VIDEO, button.button_flow))
+application.add_handler(MessageHandler(filters.TEXT, button.edit_button_flow))
+application.add_handler(CallbackQueryHandler(button.button_callback, pattern="add_more|done_buttons|remove_last|edit_last"))
 
 # Run the bot
 if __name__ == "__main__":
